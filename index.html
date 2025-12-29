@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitFlow Professional</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* --- COLOR PALETTE --- */
+            --primary: #4f46e5;       /* Indigo */
+            --primary-soft: #eef2ff;
+            --bg-app: #f8fafc;        /* Slate 50 */
+            --bg-panel: #ffffff;
+            --text-main: #0f172a;     /* Slate 900 */
+            --text-muted: #64748b;    /* Slate 500 */
+            --border: #e2e8f0;        /* Slate 200 */
+            
+            --success: #10b981;       /* Emerald */
+            --success-soft: #d1fae5;
+            --danger: #f43f5e;        /* Rose */
+            --danger-soft: #ffe4e6;
+            
+            /* --- UI CONSTANTS --- */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body { 
+            margin: 0; 
+            font-family: var(--font-main); 
+            background: var(--bg-app); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        /* --- HEADER & CONTROLS --- */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; z-index: 50;
+        }
+
+        .brand { 
+            font-weight: 800; font-size: 1.25rem; letter-spacing: -0.03em; 
+            color: var(--primary);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .controls-group {
+            display: flex; gap: 12px; align-items: center; 
+        }
+
+        select {
+            border: 1px solid var(--border); background: white; 
+            font-family: inherit; font-size: 0.9rem; font-weight: 600; 
+            color: var(--text-main); padding: 8px 12px; cursor: pointer; border-radius: var(--radius-sm);
+        }
+
+        .btn {
+            padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+            background: white; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary { 
+            background: var(--primary); color: white; border: none; 
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+        }
+        .btn-primary:hover { background: #4338ca; color: white; }
+
+        /* --- LAYOUT --- */
+        .workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        /* --- TABLE PANEL --- */
+        .panel-table {
+            flex: 1; overflow: auto; background: var(--bg-panel); position: relative;
+            scrollbar-width: thin;
+        }
+
+        table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 700px; }
+
+        /* HEADERS */
+        thead th {
+            position: sticky; top: 0; z-index: 30;
+            background: rgba(255, 255, 255, 0.98);
+            border-bottom: 1px solid var(--border);
+            border-right: 1px dashed var(--border);
+            padding: 12px 16px; text-align: center; min-width: 150px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            vertical-align: top;
+        }
+        
+        .habit-title { font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+
+        /* HEADER BADGES (New Feature) */
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .badge-good {
+            background-color: var(--success-soft);
+            color: #059669; /* Darker Emerald */
+        }
+        .badge-bad {
+            background-color: var(--danger-soft);
+            color: #e11d48; /* Darker Rose */
+        }
+
+        /* DATE COLUMN */
+        .col-date {
+            position: sticky; left: 0; z-index: 35;
+            width: 80px; background: var(--bg-panel);
+            border-right: 2px solid var(--border); padding: 0;
+        }
+        thead th.col-date { 
+            z-index: 40; background: var(--bg-app); 
+            color: var(--text-muted); text-transform: uppercase; 
+            font-size: 0.75rem; letter-spacing: 1px; 
+            vertical-align: middle;
+        }
+
+        .date-cell {
+            height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .day-num { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+        .day-name { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+        
+        /* REST DAY */
+        .rest-day-bg { background: #f1f5f9; }
+        .rest-cell {
+            width: 100%; height: 100%;
+            background: #f1f5f9; color: #94a3b8;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
+            user-select: none;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0,0,0,0.03) 5px, rgba(0,0,0,0.03) 10px);
+        }
+
+        /* INTERACTIVE CELLS */
+        td { padding: 0; height: 56px; border-bottom: 1px solid var(--border); border-right: 1px dashed var(--border); }
+        
+        .tile-wrapper {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.1s;
+        }
+        .tile-wrapper:hover { background-color: var(--primary-soft); }
+        
+        .tile {
+            width: 32px; height: 32px; border-radius: 8px;
+            border: 2px solid var(--border);
+            background: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white;
+            transition: all 0.2s; /* Standard transition, no bounce */
+        }
+
+        /* TILE STATES */
+        .state-1 .tile {
+            background: var(--success); border-color: var(--success);
+        }
+        .state-1 .tile::after { content: '✓'; font-weight: 800; font-size: 16px; }
+
+        .state-2 .tile {
+            background: var(--danger); border-color: var(--danger);
+        }
+        .state-2 .tile::after { content: '✕'; font-weight: 800; font-size: 16px; }
+
+        /* --- RESIZER --- */
+        .resizer {
+            width: 1px; background: var(--border); position: relative;
+            cursor: col-resize; z-index: 45; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .resizer:hover { background: var(--primary); width: 4px; transition: 0.2s; }
+
+        /* --- STATS PANEL --- */
+        .panel-stats {
+            width: 340px; background: var(--bg-app); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 20px; padding: 24px;
+            overflow-y: auto; flex-shrink: 0;
+        }
+
+        .card {
+            background: white; border-radius: var(--radius-lg); padding: 20px;
+            box-shadow: var(--shadow-sm); border: 1px solid white;
+        }
+
+        .stat-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .mini-stat { text-align: center; }
+        .mini-label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .mini-val { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-main); }
+        .val-success { color: var(--success); }
+        .val-danger { color: var(--danger); }
+
+        .chart-container { position: relative; height: 200px; width: 100%; margin-top: 10px; }
+        .card-header { font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px; }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(2px);
+            z-index: 100; display: none; place-items: center;
+        }
+        .modal-overlay.open { display: grid; }
+        
+        .modal {
+            background: white; width: 420px; border-radius: 16px; padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .modal-title { font-size: 1.25rem; font-weight: 800; margin: 0 0 20px 0; color: var(--text-main); }
+        
+        .habit-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 10px 0; border-bottom: 1px solid var(--border); font-weight: 500; font-size: 0.95rem;
+        }
+        .input-row { display: flex; gap: 12px; margin-top: 24px; }
+        input { 
+            flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--bg-app); font-family: inherit;
+        }
+        input:focus { background: white; border-color: var(--primary); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            SHIVA KESHAV
+        </div>
+        
+        <div class="controls-group">
+            <select id="selMonth" onchange="updateDateRange()">
+                <option value="0">January</option> <option value="1">February</option>
+                <option value="2">March</option>   <option value="3">April</option>
+                <option value="4">May</option>     <option value="5">June</option>
+                <option value="6">July</option>    <option value="7">August</option>
+                <option value="8">September</option><option value="9">October</option>
+                <option value="10">November</option><option value="11">December</option>
+            </select>
+            <select id="selYear" onchange="updateDateRange()">
+                <option value="2024">2024</option>
+                <option value="2025" selected>2025</option>
+                <option value="2026">2026</option>
+            </select>
+
+            <button class="btn btn-primary" onclick="openModal()">
+                Manage Tasks
+            </button>
+            <button class="btn" onclick="resetAll()">
+                Reset
+            </button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        
+        <div class="panel-table" id="tablePanel">
+            <table id="trackerTable">
+                <thead id="tHead"></thead>
+                <tbody id="tBody"></tbody>
+            </table>
+        </div>
+
+        <div class="resizer" id="resizer"></div>
+
+        <div class="panel-stats" id="statsPanel">
+            
+            <div class="card">
+                <div class="stat-group">
+                    <div class="mini-stat">
+                        <div class="mini-label">Done</div>
+                        <div class="mini-val val-success" id="statDone">0</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-label">Missed</div>
+                        <div class="mini-val val-danger" id="statMissed">0</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-label">Streak</div>
+                        <div class="mini-val" id="statStreak">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Habit Consistency</div>
+                <div class="chart-container">
+                    <canvas id="chartBar"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Daily Completion Trend</div>
+                <div class="chart-container">
+                    <canvas id="chartLine"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="modal-title">Manage Habits</h3>
+                <button class="btn" style="border:none;" onclick="closeModal()">✕</button>
+            </div>
+            
+            <div id="taskList" style="max-height: 300px; overflow-y: auto;"></div>
+            
+            <div class="input-row">
+                <input type="text" id="newTask" placeholder="Enter new habit name...">
+                <button class="btn btn-primary" onclick="addTask()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- LOGIC & STATE ---
+        const defaultHabits = ['Morning Run', 'Deep Work', 'Read 20m', 'Meditation'];
+        let habits = JSON.parse(localStorage.getItem('hf_premium_habits')) || defaultHabits;
+        let data = JSON.parse(localStorage.getItem('hf_premium_data')) || {}; 
+        
+        let curYear = new Date().getFullYear();
+        let curMonth = new Date().getMonth();
+
+        let cBar, cLine;
+
+        // --- INITIALIZATION ---
+        function init() {
+            // Set Selectors
+            document.getElementById('selYear').value = curYear;
+            document.getElementById('selMonth').value = curMonth;
+            
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#64748b';
+            
+            initCharts();
+            render();
+            initResizer();
+            
+            // Modal Close on overlay click
+            document.getElementById('editModal').addEventListener('click', (e) => {
+                if(e.target === e.currentTarget) closeModal();
+            });
+        }
+
+        // --- RENDER ENGINE ---
+        function render() {
+            const tHead = document.getElementById('tHead');
+            const tBody = document.getElementById('tBody');
+            const daysInMonth = new Date(curYear, parseInt(curMonth) + 1, 0).getDate();
+
+            // 1. HEADER ROW
+            let headRow = document.createElement('tr');
+            
+            // Corner
+            let thCorner = document.createElement('th');
+            thCorner.className = 'col-date';
+            thCorner.innerText = 'Date';
+            headRow.appendChild(thCorner);
+
+            // Habit Columns with Summary Badges
+            habits.forEach(habit => {
+                // Calculate Missed Count for this habit
+                let missedCount = 0;
+                for(let d=1; d<=daysInMonth; d++) {
+                    if(getValue(habit, d) === 2) missedCount++;
+                }
+
+                // Determine Badge HTML
+                let badgeHtml = '';
+                if(missedCount === 0) {
+                    badgeHtml = `<div class="status-badge badge-good">Good</div>`;
+                } else {
+                    badgeHtml = `<div class="status-badge badge-bad">${missedCount} Missed</div>`;
+                }
+
+                let th = document.createElement('th');
+                th.innerHTML = `
+                    <div class="habit-title">${habit}</div>
+                    ${badgeHtml}
+                `;
+                headRow.appendChild(th);
+            });
+            tHead.innerHTML = ''; tHead.appendChild(headRow);
+
+            // 2. BODY ROWS
+            tBody.innerHTML = '';
+            for(let d=1; d<=daysInMonth; d++) {
+                let date = new Date(curYear, curMonth, d);
+                let dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                let isRestDay = (date.getDay() === 0); // Sunday
+
+                let tr = document.createElement('tr');
+
+                // Date Cell
+                let tdDate = document.createElement('td');
+                tdDate.className = 'col-date';
+                
+                tdDate.innerHTML = `
+                    <div class="date-cell ${isRestDay ? 'rest-day-bg' : ''}">
+                        <span class="day-num">${d}</span>
+                        <span class="day-name">${dayName}</span>
+                    </div>`;
+                tr.appendChild(tdDate);
+
+                // Habit Cells
+                habits.forEach(habit => {
+                    let td = document.createElement('td');
+                    
+                    if (isRestDay) {
+                        // REST DAY CELL (NO TRACKING)
+                        let div = document.createElement('div');
+                        div.className = 'rest-cell';
+                        div.innerText = 'REST';
+                        td.appendChild(div);
+                    } else {
+                        // TRACKING CELL
+                        let val = getValue(habit, d);
+                        let div = document.createElement('div');
+                        div.className = `tile-wrapper state-${val}`;
+                        div.innerHTML = `<div class="tile"></div>`;
+                        
+                        div.onclick = function() {
+                            toggle(habit, d);
+                        };
+                        td.appendChild(div);
+                    }
+                    tr.appendChild(td);
+                });
+                tBody.appendChild(tr);
+            }
+            updateStats();
+        }
+
+        // --- DATA MANAGEMENT ---
+        function getKey(habit, day) { return `${habit}-${curYear}-${curMonth}-${day}`; }
+        function getValue(habit, day) { return data[getKey(habit, day)] || 0; }
+        
+        function toggle(habit, day) {
+            let k = getKey(habit, day);
+            let next = ((data[k]||0) + 1) % 3;
+            if (next === 0) delete data[k]; else data[k] = next;
+            save(); render();
+        }
+
+        function updateDateRange() {
+            curYear = document.getElementById('selYear').value;
+            curMonth = document.getElementById('selMonth').value;
+            render();
+        }
+
+        function save() {
+            localStorage.setItem('hf_premium_habits', JSON.stringify(habits));
+            localStorage.setItem('hf_premium_data', JSON.stringify(data));
+        }
+
+        function resetAll() {
+            if(confirm("Are you sure? This will wipe all data.")) {
+                localStorage.removeItem('hf_premium_data'); data = {}; render();
+            }
+        }
+
+        // --- STATISTICS ---
+        function updateStats() {
+            const daysInMonth = new Date(curYear, parseInt(curMonth) + 1, 0).getDate();
+            let totalDone = 0, totalMissed = 0, streak = 0, curRun = 0;
+            let dailyTrend = new Array(daysInMonth).fill(0);
+
+            for(let d=1; d<=daysInMonth; d++) {
+                let date = new Date(curYear, curMonth, d);
+                // Skip stats for Sunday
+                if (date.getDay() === 0) continue; 
+
+                let dayDone = false;
+                
+                habits.forEach(h => {
+                    let v = getValue(h, d);
+                    if(v === 1) { totalDone++; dailyTrend[d-1]++; dayDone = true; }
+                    if(v === 2) totalMissed++;
+                });
+
+                // Streak Logic (Sundays do not break streak)
+                if(dayDone) { 
+                    curRun++; 
+                    if(curRun > streak) streak = curRun; 
+                } else { 
+                    curRun = 0; 
+                }
+            }
+
+            // DOM Updates
+            document.getElementById("statDone").innerText = totalDone;
+            document.getElementById("statMissed").innerText = totalMissed;
+            document.getElementById('statStreak').innerText = streak;
+
+            // Chart Updates
+            let barData = habits.map(h => {
+                let c = 0; 
+                let potential = 0;
+                for(let d=1; d<=daysInMonth; d++) {
+                    let date = new Date(curYear, curMonth, d);
+                    if (date.getDay() !== 0) {
+                        potential++;
+                        if(getValue(h,d)===1) c++;
+                    }
+                }
+                return potential === 0 ? 0 : Math.round((c/potential)*100);
+            });
+            cBar.data.labels = habits; cBar.data.datasets[0].data = barData; cBar.update();
+
+            cLine.data.labels = Array.from({length:daysInMonth},(_,i)=>i+1);
+            cLine.data.datasets[0].data = dailyTrend; 
+            cLine.options.scales.y.suggestedMax = habits.length;
+            cLine.update();
+        }
+
+        function initCharts() {
+            cBar = new Chart(document.getElementById('chartBar'), {
+                type: 'bar',
+                data: { labels:[], datasets:[{data:[], backgroundColor:'#4f46e5', borderRadius:4, barPercentage: 0.6}] },
+                options: { 
+                    responsive:true, maintainAspectRatio:false, indexAxis:'y', 
+                    plugins:{legend:{display:false}}, 
+                    scales:{x:{grid:{display:false}, max:100}, y:{grid:{display:false}}} 
+                }
+            });
+
+            cLine = new Chart(document.getElementById('chartLine'), {
+                type: 'line',
+                data: { labels:[], datasets:[{data:[], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.4, pointRadius:0, pointHoverRadius:4}] },
+                options: { 
+                    responsive:true, maintainAspectRatio:false, 
+                    plugins:{legend:{display:false}}, 
+                    scales:{y:{beginAtZero:true, grid:{color:'#f1f5f9'}}, x:{grid:{display:false}}} 
+                }
+            });
+        }
+
+        // --- RESIZER ---
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const leftPanel = document.getElementById('tablePanel');
+            const container = document.querySelector('.workspace');
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+            document.addEventListener('mousemove', (e) => {
+                if(!isResizing) return;
+                let offset = e.clientX - container.offsetLeft;
+                if(offset > 300 && offset < container.clientWidth - 300) leftPanel.style.flex = `0 0 ${offset}px`;
+            });
+            document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+        }
+
+        // --- MODAL & TASK MANAGEMENT ---
+        const modal = document.getElementById('editModal');
+        
+        function openModal() { 
+            modal.classList.add('open');
+            renderList(); 
+        }
+        
+        function closeModal() { 
+            modal.classList.remove('open');
+            render(); // Re-render table in case habits changed
+        }
+        
+        function renderList() {
+            let list = document.getElementById('taskList'); 
+            list.innerHTML='';
+            habits.forEach((h,i) => {
+                list.innerHTML += `
+                    <div class="habit-item">
+                        <span>${h}</span>
+                        <button class="btn" style="color:var(--danger); border:none; padding:4px 8px;" onclick="delTask(${i})">Remove</button>
+                    </div>`;
+            });
+        }
+        
+        function addTask() { 
+            let input = document.getElementById('newTask');
+            let v = input.value.trim(); 
+            if(v){ 
+                habits.push(v); 
+                input.value=''; 
+                save(); 
+                renderList(); 
+            } 
+        }
+        
+        function delTask(i) { 
+            if(confirm('Delete this habit?')) { 
+                habits.splice(i,1); 
+                save(); 
+                renderList(); 
+            } 
+        }
+
+        init();
+    </script>
+</body>
+</html>
